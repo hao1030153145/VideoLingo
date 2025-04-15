@@ -67,7 +67,7 @@ def ask_gpt(prompt, response_json=True, valid_def=None, log_title='default'):
     messages = [{"role": "user", "content": prompt}]
     
     base_url = fix_base_url(api_set["base_url"])
-    client = OpenAI(api_key=api_set["key"], base_url=base_url)
+    client = OpenAI(api_key=api_set["key"], base_url=base_url, timeout=60)
     response_format = {"type": "json_object"} if response_json and api_set["model"] in llm_support_json else None
 
     max_retries = 3

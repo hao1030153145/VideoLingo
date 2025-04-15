@@ -15,6 +15,11 @@ requests==2.32.3
 resampy==0.4.3
 spacy==3.7.4
 streamlit==1.38.0
+uvicorn==0.34.0
+starlette==0.46.1
+fastapi==0.115.12
+psutil==7.0.0
+python-multipart==0.0.20
 yt-dlp
 json-repair
 ruamel.yaml
