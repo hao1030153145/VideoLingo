@@ -1,3 +1,4 @@
+import gc
 import os,sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import warnings
@@ -66,7 +67,7 @@ def transcribe_audio(raw_audio_file: str, vocal_audio_file: str, start: float, e
     
     if device == "cuda":
         gpu_mem = torch.cuda.get_device_properties(0).total_memory / (1024**3)
-        batch_size = 4
+        batch_size = 2
         compute_type = "int8" if torch.cuda.is_bf16_supported() else "int8"
         rprint(f"[cyan]🎮 GPU memory:[/cyan] {gpu_mem:.2f} GB, [cyan]📦 Batch size:[/cyan] {batch_size}, [cyan]⚙️ Compute type:[/cyan] {compute_type}")
     else:
@@ -103,7 +104,11 @@ def transcribe_audio(raw_audio_file: str, vocal_audio_file: str, start: float, e
 
         # Free GPU resources
         del model
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            print("Free GPU resources")
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            gc.collect()
 
         # Save language
         save_language(result['language'])
@@ -115,8 +120,12 @@ def transcribe_audio(raw_audio_file: str, vocal_audio_file: str, start: float, e
         result = whisperx.align(result["segments"], model_a, metadata, vocal_audio_segment, device, return_char_alignments=False)
 
         # Free GPU resources again
-        torch.cuda.empty_cache()
-        del model_a
+        del model_a, metadata
+        if torch.cuda.is_available():
+            print("Free GPU resources again")
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            gc.collect()
 
         # Adjust timestamps
         for segment in result['segments']:

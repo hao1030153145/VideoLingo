@@ -309,27 +309,24 @@ def get_progress(task_id: str):
 # 导出srt文件的接口
 @app.get("/api/srt_zip")
 def srt_zip():
-    zip_buffer = io.BytesIO()
     output_dir = "output"
+    file_name = "subtitles.zip"
+    zip_path = os.path.join(output_dir, file_name)
     try:
-        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        with zipfile.ZipFile(zip_path, "w") as zip_file:
             for file_name in os.listdir(output_dir):
                 if file_name.endswith(".srt"):
                     file_path = os.path.join(output_dir, file_name)
                     if os.path.isfile(file_path):
                         with open(file_path, "rb") as f:
                             zip_file.writestr(file_name, f.read())
-        zip_buffer.seek(0)
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=subtitles.zip"}
-        )
+
+        # 返回zip文件的URL
+        return {"url": f"/static/{file_name}"}
     except HTTPException as he:
         raise he
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"文件生成失败: {str(e)}")
-
 
 
 from pydantic import BaseModel
@@ -343,7 +340,6 @@ class ConfigUpdate(BaseModel):
     demucs_voice: bool
 
 src_langs = [
-    {"label": "🔄 自动检测", "value": "auto"},
     {"label": "🇺🇸 English", "value": "en"},
     {"label": "🇨🇳 简体中文", "value": "zh"},
     {"label": "🇪🇸 Español", "value": "es"},
@@ -429,3 +425,37 @@ async def get_config():
         raise HTTPException(status_code=400, detail=f"Configuration key not found: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load configuration: {str(e)}")
+
+import requests
+from werkzeug.middleware.proxy_fix import ProxyFix
+PROXY_PATH = '/api/'
+PROXY_TARGET = 'http://a.fanhan-ai.com:18501'
+@app.route(PROXY_PATH + '<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def proxy(path):
+    """代理 API 请求"""
+    url = f"{PROXY_TARGET}{PROXY_PATH}{path}"
+
+    # 转发请求方法、头部和数据
+    resp = requests.request(
+        method=request.method,
+        url=url,
+        headers={key: value for key, value in request.headers if key != 'Host'},
+        data=request.get_data(),
+        cookies=request.cookies,
+        allow_redirects=False,
+        stream=True
+    )
+
+    # 获取响应头部
+    headers = [(name, value) for name, value in resp.raw.headers.items()]
+
+    # 返回响应
+    return resp.content, resp.status_code, headers
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_static(path):
+    """提供静态文件，对于SPA应用支持回退到index.html"""
+    if path and os.path.exists(os.path.join(app.static_folder, path)):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')

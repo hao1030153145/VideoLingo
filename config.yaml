@@ -6,7 +6,7 @@ display_language: "zh-CN"
 
 # API settings
 api:
-  key: 'your_api_key'
+  key: 'sk-Ebv5DC9Gb3UI7TPwYNIvu2Ky6eRZZ8vIlAvxYGYpOsWoleB2'
   base_url: 'https://api.302.ai'
   model: 'gemini-2.0-flash'
 
