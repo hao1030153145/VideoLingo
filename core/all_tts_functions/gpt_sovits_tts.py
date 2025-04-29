@@ -171,6 +171,15 @@ def start_gpt_sovits_server():
                 break
             elif user_input == 'n':
                 raise Exception("Please start the server before continuing.")
+    elif sys.platform == "linux":  # linux
+        print("Please manually start the GPT-SoVITS server at http://127.0.0.1:9880, refer to api_v2.py.")
+        while True:
+            user_input = input("Have you started the server? (y/n): ").lower()
+            if user_input == 'y':
+                process = None
+                break
+            elif user_input == 'n':
+                raise Exception("Please start the server before continuing.")
     else:
         raise OSError("Unsupported operating system. Only Windows and macOS are supported.")
 
